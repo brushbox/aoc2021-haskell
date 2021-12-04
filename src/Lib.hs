@@ -4,6 +4,7 @@ module Lib
 
 import Day1
 import Day2
+import Day3
 
 someFunc :: IO ()
-someFunc = Day2.part2
+someFunc = Day3.part2
