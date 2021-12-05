@@ -8,4 +8,4 @@ import Day3
 import Day4
 
 someFunc :: IO ()
-someFunc = Day4.part1
+someFunc = Day4.part2
