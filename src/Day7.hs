@@ -41,7 +41,10 @@ average :: PosFN
 average crabs = (sum crabs) `div` (length crabs)
 
 fuelCost :: PosFN -> CostFN -> Crabs -> Int
-fuelCost posFn costFn crabs = sum $ map (costFn (posFn crabs)) crabs
+fuelCost posFn costFn crabs =
+    sum $ map (costFn pos) crabs
+    where
+        pos = posFn crabs
 
 distance :: CostFN
 distance a b = abs $ (a - b)
