@@ -31,7 +31,7 @@ part1 = do
 
 median :: [Int] -> Int
 median vals
-    | (odd $ length vals) = sorted !! middle
+    | (odd count) = sorted !! middle
     | otherwise = avgMiddle
     where
         count = length vals
