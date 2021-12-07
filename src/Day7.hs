@@ -6,6 +6,10 @@ module Day7
 import Data.List
 import Data.List.Split
 
+type Crabs = [Int]
+type PosFN = Crabs -> Int
+type CostFN = Int -> Int -> Int
+
 part1 :: IO ()
 part1 = do
     putStrLn "Day 7 part 1"
@@ -16,14 +20,14 @@ part2 = do
     putStrLn "Day 7 part 2"
     showFuelCost average increasingCost
 
-showFuelCost :: ([Int] -> Int) -> (Int -> Int -> Int) -> IO ()
+showFuelCost :: PosFN -> CostFN -> IO ()
 showFuelCost posFn costFn = do
     contents <- readFile "day7.txt"
     let vals = map read $ splitOn "," contents
     let result = fuelCost posFn costFn vals
     putStrLn $ show result
 
-median :: [Int] -> Int
+median :: PosFN
 median vals
     | (odd count) = sorted !! middle
     | otherwise = avgMiddle
@@ -33,16 +37,16 @@ median vals
         middle = count `div` 2 - 1
         avgMiddle = ((sorted !! middle) + (sorted !! (middle + 1))) `div` 2
 
-average :: [Int] -> Int
+average :: PosFN
 average crabs = (sum crabs) `div` (length crabs)
 
-fuelCost :: ([Int] -> Int) -> (Int -> Int -> Int) -> [Int] -> Int
+fuelCost :: PosFN -> CostFN -> Crabs -> Int
 fuelCost posFn costFn crabs = sum $ map (costFn (posFn crabs)) crabs
 
-distance :: Int -> Int -> Int
+distance :: CostFN
 distance a b = abs $ (a - b)
 
-increasingCost :: Int -> Int -> Int
+increasingCost :: CostFN
 increasingCost pos a =
     n * (n + 1) `div` 2
     where
