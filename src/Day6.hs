@@ -7,7 +7,9 @@ import Data.List.Split
 import Data.Maybe
 import qualified Data.Map.Strict as Map
 
-type FishMap = Map.Map Int Int
+type Day = Int
+type FishCount = Int
+type FishMap = Map.Map Day FishCount
 
 part1 :: IO ()
 part1 = do
@@ -15,7 +17,7 @@ part1 = do
     -- let contents = "3,4,3,1,2"
     contents <- readFile "day6.txt"
     let fish = map read (splitOn "," contents)
-    goFish 80 fish
+    putStrLn $ show $ goFish 80 fish
 
 part2 :: IO ()
 part2 = do
@@ -23,35 +25,44 @@ part2 = do
     -- let contents = "3,4,3,1,2"
     contents <- readFile "day6.txt"
     let fish = map read (splitOn "," contents)
-    goFish 256 fish
+    putStrLn $ show $ goFish 256 fish
 
-goFish :: Int -> [Int] -> IO ()
-goFish gens fish = do
-    let mp = buildMap fish
-    let mp' = foldl spawn mp [0..(gens - 1)]
-    putStrLn $ show $ countFish mp' gens
+goFish :: Int -> [Day] -> Int
+goFish days fish =
+    countFish mp' days
+    where
+        mp = buildMap fish
+        mp' = foldl spawn mp [0..(days - 1)]
 
-buildMap :: [Int] -> FishMap
-buildMap fish =
-    foldl (\mp day -> Map.insertWith (+) day 1 mp) Map.empty fish
+-- we have a list where each entry is a fish represented by what day in the 
+-- spawning cycle it is up to
+buildMap :: [Day] -> FishMap
+buildMap fish = foldl (\mp day -> Map.insertWith (+) day 1 mp) Map.empty fish
 
-spawn :: FishMap -> Int -> FishMap
+spawn :: FishMap -> Day -> FishMap
 spawn mp day =
     mp'' 
     where
-        dayCount = fromMaybe 0 $ Map.lookup day mp
-        mp' = Map.insertWith (+) (day + 7) dayCount mp
-        mp'' = Map.insertWith (+) (day + 9) dayCount mp'
+        fishCount = Map.findWithDefault 0 day mp
+        mp' = Map.insertWith (+) (day + 7) fishCount mp
+        mp'' = Map.insertWith (+) (day + 9) fishCount mp'
 
-countFish :: FishMap -> Int -> Int
+-- countFish :: FishMap -> Day -> FishCount
+-- countFish mp day =
+--     Map.foldlWithKey sum 0 mp
+--     where
+--         sum s k v
+--             | (k - day) < 0 = s
+--             | otherwise = s + v
+
+countFish :: FishMap -> Day -> FishCount
 countFish mp day =
-    Map.foldlWithKey sum 0 mp
+    foldl (\s ix -> (lookup ix) + s) 0 daysLeft
     where
-        sum s k v
-            | (k - day) < 0 = s
-            | otherwise = s + v
+        lookup ix = Map.findWithDefault 0 ix mp
+        daysLeft = dropWhile (< day) (Map.keys mp)
 
-showMap :: FishMap -> Int -> String
+showMap :: FishMap -> Day -> String
 showMap mp day =
     Map.foldlWithKey present "" mp
     where

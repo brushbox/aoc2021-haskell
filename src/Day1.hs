@@ -4,13 +4,13 @@ module Day1
     )
     where
 
--- Ruby: input.split("\n").map(&:to_i).each_cons(2).select { |(a, b)| a < b }.count
+-- Ruby: File.new("day1.txt").readlines.map(&:to_i).each_cons(2).select { |(a, b)| a < b }.count
 part1 :: IO ()
 part1 = do
     numbers <- ints
     putStrLn . show . length . increasing $ pairs numbers
 
--- Ruby: input.split("\n").map(&:to_i).each_cons(3).map(&:sum).each_cons(2).select { |(a, b)| a < b }.count
+-- Ruby: File.new("day1.txt").readlines.map(&:to_i).each_cons(3).map(&:sum).each_cons(2).select { |(a, b)| a < b }.count
 part2 :: IO ()
 part2 = do
     numbers <- ints
