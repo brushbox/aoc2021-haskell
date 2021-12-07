@@ -1,4 +1,4 @@
-module Day7 
+module Day7
     ( part1
     , part2
     ) where
@@ -6,27 +6,21 @@ module Day7
 import Data.List
 import Data.List.Split
 
--- Ruby solution for part 1
--- is = File.read("day7.txt").split(",").map(&:to_i)
--- def med(array)
---     s = array.size
---     a = array.sort
---     if s.odd?
---         a[s/2-1]
---     else
---         (a[s/2-1] + a[s/2]) / 2
---     end
--- end
--- median = med(is)
--- is.sort.map { |i| (i - median).abs }.sum
-
 part1 :: IO ()
 part1 = do
     putStrLn "Day 7 part 1"
+    showFuelCost median distance
+
+part2 :: IO ()
+part2 = do
+    putStrLn "Day 7 part 2"
+    showFuelCost average increasingCost
+
+showFuelCost :: ([Int] -> Int) -> (Int -> Int -> Int) -> IO ()
+showFuelCost posFn costFn = do
     contents <- readFile "day7.txt"
     let vals = map read $ splitOn "," contents
-    let med = median vals
-    let result = foldl (\s v -> s + (abs (med - v))) 0 vals
+    let result = fuelCost posFn costFn vals
     putStrLn $ show result
 
 median :: [Int] -> Int
@@ -39,17 +33,17 @@ median vals
         middle = count `div` 2 - 1
         avgMiddle = ((sorted !! middle) + (sorted !! (middle + 1))) `div` 2
 
-part2 :: IO ()
-part2 = do
-    putStrLn "Day 7 part 2"
-    contents <- readFile "day7.txt"
-    let vals = map read $ splitOn "," contents
-    let avg = (sum vals) `div` (length vals)
-    let result = foldl (\s v -> s + (cost (avg - v))) 0 vals
-    putStrLn $ show result
+average :: [Int] -> Int
+average crabs = (sum crabs) `div` (length crabs)
 
-cost :: Int -> Int
-cost v = 
+fuelCost :: ([Int] -> Int) -> (Int -> Int -> Int) -> [Int] -> Int
+fuelCost posFn costFn crabs = sum $ map (costFn (posFn crabs)) crabs
+
+distance :: Int -> Int -> Int
+distance a b = abs $ (a - b)
+
+increasingCost :: Int -> Int -> Int
+increasingCost pos a =
     n * (n + 1) `div` 2
     where
-        n = abs v
+        n = abs $ (pos - a)
