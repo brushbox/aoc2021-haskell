@@ -81,12 +81,11 @@ inferDigitMappings unknownDigits =
         fiveSegments = filterByLength 5 unknownDigits
         sixSegments = filterByLength 6 unknownDigits
 
-        findWhere :: (String -> Bool) -> [String] -> String
-        findWhere pred candidates =
-            case (find pred candidates) of
-                Nothing -> error "We did something wrong"
-                Just result -> result
-
+findWhere :: (String -> Bool) -> [String] -> String
+findWhere pred candidates =
+    case (find pred candidates) of
+        Nothing -> error "We did something wrong"
+        Just result -> result
 
 filterByLength :: Int -> [String] -> [String]
 filterByLength len = filter (lengthIs len)
