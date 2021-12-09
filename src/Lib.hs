@@ -10,8 +10,9 @@ import Day5
 import Day6
 import Day7
 import Day8
+import Day9
 
 someFunc :: IO ()
 someFunc = do 
-    Day8.part1
-    Day8.part2
+    Day9.part1
+    Day9.part2
