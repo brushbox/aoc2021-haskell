@@ -62,13 +62,13 @@ mapSeafloor contents =
         height = length rows
 
 lowPoints :: Seafloor -> [Point]
-lowPoints seafloor@(Seafloor width height _ ) = [(x, y) | x <- [0..(width-1)], y <- [0..(height-1)], isLower seafloor (x, y)]
+lowPoints seafloor@(Seafloor width height _ ) = [(x, y) | x <- [0..(width-1)], y <- [0..(height-1)], isLowPoint seafloor (x, y)]
 
 riskLevels :: [Point] -> Seafloor -> [Int]
 riskLevels points seafloor = map (\pt -> (1 + (Char.digitToInt $ floorHeight seafloor pt))) points
 
-isLower :: Seafloor -> Point -> Bool
-isLower s point =
+isLowPoint :: Seafloor -> Point -> Bool
+isLowPoint s point =
     all (pointHeight < ) surroundingHeights
     where
         surroundingHeights = map (floorHeight s) $ quadrants point
