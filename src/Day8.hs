@@ -108,4 +108,4 @@ isNotSubset :: String -> String -> Bool
 isNotSubset lookFor = not . (isSubset lookFor)
 
 isSuperset :: String -> String -> Bool
-isSuperset super = ((flip isSubset) super)
+isSuperset super = (`isSubset` super)
