@@ -12,18 +12,25 @@ import Data.Maybe
 import Data.List
 import Data.List.Split
 
-type Inputs = [String]
-type Outputs = [String]
+type Signals = Set Char
+type DigitMapping = Map Signals Int
 
 part1 :: IO ()
 part1 = do
     putStrLn "Day 8 part 1"
     contents <- readFile "day8.txt"
     let answer = sum $ map (length . uniqueSegments . snd . parseLine) $ lines contents
-
     putStrLn $ show answer
 
-uniqueSegments :: Inputs -> Inputs
+part2 :: IO ()
+part2 = do
+    putStrLn "Day 8 part 2"
+    contents <- readFile "day8.txt"
+    let displays = map parseLine $ lines contents
+    let results = map (\(ins, outs) -> mappingToNumber outs (inferDigitMappings ins)) displays
+    putStrLn $ show (sum results)
+
+uniqueSegments :: [String] -> [String]
 uniqueSegments inputs =
     filter lengthMatches inputs
     where
@@ -34,24 +41,11 @@ uniqueSegments inputs =
             7 -> True
             otherwise -> False
 
-parseLine :: String -> (Inputs, Outputs)
+parseLine :: String -> ([String], [String])
 parseLine line =
-    (inputs, outputs)
+    (splitOn " " diagnostics, splitOn " " display)
     where
-        inputs = map sort $ splitOn " " diagnostics
-        outputs = map sort $ splitOn " " display
         [diagnostics, display] = splitOn " | "  line
-
-type Signals = Set Char
-type DigitMapping = Map Signals Int
-
-part2 :: IO ()
-part2 = do
-    putStrLn "Day 8 part 2"
-    contents <- readFile "day8.txt"
-    let displays = map parseLine $ lines contents
-    let results = map (\(ins, outs) -> mappingToNumber outs (inferDigitMappings ins)) displays
-    putStrLn $ show (sum results)
 
 mappingToNumber :: [String] -> DigitMapping -> Int
 mappingToNumber inputs mapping =
