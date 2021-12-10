@@ -11,9 +11,8 @@ type ParseResult = Either Char String
 part1 :: IO ()
 part1 = do
     putStrLn "Day 10 part 1"
-    contents <- readFile "day10.txt"
-    -- contents <- readFile "day10_example.txt"
-    let ls = lines contents
+    ls <- lines <$> readFile "day10.txt"
+    -- ls <- lines <$> readFile "day10_example.txt"
     let (result, _) = partitionEithers $ map (parseChunk "") ls
     let answer = sum $ map scoreChar result
     putStrLn $ show $ answer
@@ -27,17 +26,17 @@ scoreChar '>' = 25137
 part2 :: IO ()
 part2 = do
     putStrLn "Day 10 part 2"
-    -- contents <- readFile "day10_example.txt"
-    contents <- readFile "day10.txt"
-    let ls = lines contents
-    let (_, stacks) = partitionEithers $ map (parseChunk "") ls
-    let scores = sort $ map scoreStack stacks
-    let middle = scores !! ((length scores) `div` 2)
-    putStrLn $ show middle
+    -- ls <- lines <$> readFile "day10_example.txt"
+    ls <- lines <$> readFile "day10.txt"
+    putStrLn $ show $ part2' ls
 
-getStack :: ParseResult -> String
-getStack (Right stack) = stack
-getStack _ = error "Can only get the stacks from Good results"
+part2' :: [String] -> Int
+part2' ls =
+    middle
+    where
+        middle = scores !! ((length scores) `div` 2)
+        scores = sort $ map scoreStack stacks
+        (_, stacks) = partitionEithers $ map (parseChunk "") ls
 
 scoreStack :: String -> Int
 scoreStack s = 
