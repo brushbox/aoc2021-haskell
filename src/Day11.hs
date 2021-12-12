@@ -16,122 +16,123 @@ sample = "11111\n19991\n19191\n19991\n11111"
 part1 :: IO ()
 part1 = do
     putStrLn "Day 11 part 1"
-    -- ls <- lines <$> readFile "day11.txt"
-    ls <- lines <$> readFile "day11_example.txt"
-    -- let ls = lines sample
-    -- let (m, (w, h)) = buildOctoMap ls
-    let (m, size) = buildOctoMap ls
-    let (_, flashCount) = applyStep m size 100
-    -- let (m', flashes) = incrementMap m (w, h)
-    -- let m'' = foldFlashes m' flashes
-    -- putStrLn $ toString m (w, h)
-    -- putStrLn $ show flashes
-    -- putStrLn $ toString m'' (w, h)
+    ls <- lines <$> readFile "day11.txt"
+    -- ls <- lines <$> readFile "day11_example.txt"
+    let m = buildOctoMap ls
+    let flashCount = applyStep m 100 0
     putStrLn $ show flashCount
     
 part2 :: IO ()
 part2 = do
     putStrLn "Day 11 part 2"
-    -- ls <- lines <$> readFile "day11.txt"
+    ls <- lines <$> readFile "day11.txt"
+    -- ls <- lines <$> readFile "day11_example.txt"
+    let m = buildOctoMap ls
+    let step = findSyncedFlashes m 0 0
+    putStrLn $ show step
 
-charToInt :: Char -> Int
-charToInt c = read (c:"")
-
-buildOctoMap :: [String] -> (OctoMap, Point)
-buildOctoMap ls =
-    (octoMap, (width, height))
+buildOctoMap :: [String] -> OctoMap
+buildOctoMap ls = 
+    Map.fromList pointTuples
     where
-        width = length $ head ls
-        height = length ls
-        octoMap = foldl (\m (y, l) -> buildOctoMapLine m y l) Map.empty (zip [0..] ls)
-        buildOctoMapLine :: OctoMap -> Int -> String -> OctoMap
-        buildOctoMapLine m y l =
-            foldl (\m (x, c) -> Map.insert (x, y) (charToInt c) m) m (zip [0..] l)
+        rows = zip ls [0..]
+        pointTuples = concatMap createPointTuples rows
+        createPointTuples (row, y) = zip [(x, y) | x <- [0..]] (map digitToInt row)
 
-applyStep :: OctoMap -> Point -> Int -> (OctoMap, Int)
-applyStep m pt count =
-    foldl (\(m', sum) _ -> stepAndSum m' pt sum) (m, 0) [1..count]
+applyStep :: OctoMap -> Int -> Int -> Int
+applyStep _ 0 flashes = flashes
+applyStep m count flashes = applyStep m' (count - 1) (flashes + stepSum)
+                            where
+                                (stepSum, m') = step m 
 
-stepAndSum :: OctoMap -> Point -> Int -> (OctoMap, Int)
-stepAndSum m pt sum =
-    (trace (mapAndFlashString (m', sum + flashes) pt) (m', sum + flashes))
+findSyncedFlashes :: OctoMap -> Int -> Int -> Int
+findSyncedFlashes _ n 100 = n
+findSyncedFlashes m n flashes = (traceShow (n, flashes) (findSyncedFlashes m' (n + 1) stepFlashes))
+                                  where
+                                    (stepFlashes, m') = step m
+
+step :: OctoMap -> (Int, OctoMap)
+step m =
+    countFlashesAndReset flashedMap
     where
-        (m', flashes) = step m pt
+        points = [(x,y) | x <- [0..9], y <- [0..9]]
+        flashedMap = foldl (\m pt -> updatePoint m pt (m Map.! pt)) m points
 
-step :: OctoMap -> Point -> (OctoMap, Int)
-step m size =
-    countFlashesAndReset flashedMap size
-    where
-        flashedMap = foldFlashes incdMap flashes
-        (incdMap, flashes) = incrementMap m size
+updatePoint :: OctoMap -> Point -> Int -> OctoMap
+updatePoint m pt energy | energy + 1 == 10 = flashPoints m pt -- foldl (\m pt -> updatePoint m pt (m Map.! pt)) updatedMap adjacents
+                        | otherwise = updatedMap    
+                    where
+                        onMap (x, y) = x >= 0 && x < 10 && y >= 0 && y < 10
+                        adjacents (x, y) = [(x + dx, y + dy) | dx <- [-1, 0, 1], dy <- [-1, 0, 1], onMap (x + dx, y + dy), (dx /= 0 || dy /= 0)]
+                        updatedMap = Map.insert pt (energy + 1) m
+                        flashPoints m pt = foldl (\m pt -> updatePoint m pt (m Map.! pt)) updatedMap (adjacents pt)
 
-incrementMap :: OctoMap -> Point -> (OctoMap, [Point])
-incrementMap m (width, height) = 
-    foldl (\(m', flashes) pt -> incAndCollectFlashes flashes $ incrementAndFindFlash m' pt) (m, []) points
-    where
-        points = allPoints width height
-        incAndCollectFlashes flashes (m', Nothing) = (m', flashes)
-        incAndCollectFlashes flashes (m', Just flash) = (m', flash:flashes)
+countFlashesAndReset :: OctoMap -> (Int, OctoMap)
+countFlashesAndReset m  = Map.mapAccum needReset 0 m
 
-increment :: OctoMap -> Point -> (OctoMap, Int)
-increment m pt =
-    (Map.insert pt newVal m, newVal)
-    where
-        newVal :: Int
-        newVal = (1 + (Map.findWithDefault (-1) pt m))
+needReset :: Int -> Int -> (Int, Int)
+needReset flashes energy | energy > 9 = (flashes + 1, 0)
+                         | otherwise = (flashes, energy)
 
-incrementAndFindFlash :: OctoMap -> Point -> (OctoMap, Maybe Point)
-incrementAndFindFlash m pt =
-    if val == 10 then
-        (m', Just pt)
-    else
-        (m', Nothing)
-    where
-        (m', val) = increment m pt
 
-incrementAndFlash :: OctoMap -> Point -> OctoMap
-incrementAndFlash m pt =
-    if val == 10 then
-        flash m' pt
-    else
-        m'
-    where
-        (m', val) = increment m pt
 
-foldFlashes :: OctoMap -> [Point] -> OctoMap
-foldFlashes m flashes =
-    foldl (\m pt -> flash m pt) m flashes
 
-flash :: OctoMap -> Point -> OctoMap
-flash m (x, y) =
-    foldl (\m pt' -> incrementAndFlash m pt') m adjacents
-    where
-        adjacents = [(x + dx, y + dy) | dx <- [-1, 0, 1], dy <- [-1, 0, 1], (dx /= 0 || dy /= 0)]
 
-mapAndFlashString :: (OctoMap, Int) -> Point -> String
-mapAndFlashString (m, flashes) size = 
-    (toString m size) ++ "\n" ++ (show flashes) ++ "\n"
 
-toString :: OctoMap -> Point -> String
-toString m (w, h) =
-    unlines ls
-    where
-        ls = map (\y -> toLine y w m) [0..(h-1)]
-        toLine :: Int -> Int -> OctoMap -> String
-        toLine y w m = foldr (\x l -> (show $ Map.findWithDefault (-1) (x, y) m) ++ l) "" [0..(w-1)]
 
-countFlashesAndReset :: OctoMap -> Point -> (OctoMap, Int)
-countFlashesAndReset m (w, h) =
-    foldl (\(m', count) pt -> (countAndReset m' pt count)) (m, 0) points
-    where
-        points = allPoints w h
-        countAndReset :: OctoMap -> Point -> Int -> (OctoMap, Int)
-        countAndReset m pt count =
-            if (Map.findWithDefault 0 pt m) > 9 then
-                (Map.insert pt 0 m, count + 1)
-            else
-                (m, count)
+-- incrementMap :: OctoMap -> (OctoMap, [Point])
+-- incrementMap m  = 
+--     foldl (\(m', flashes) pt -> incAndCollectFlashes flashes $ incrementAndFindFlash m' pt) (m, []) points
+--     where
+--         points = [(x,y) | x <- [0..9], y <- [0..9]]
+--         incAndCollectFlashes flashes (m', Nothing) = (m', flashes)
+--         incAndCollectFlashes flashes (m', Just flash) = (m', flash:flashes)
 
-allPoints :: Int -> Int -> [Point]
-allPoints width height = 
-    [(x, y) | x <- [0..(width-1)], y <- [0..(height-1)]]
+-- increment :: OctoMap -> Point -> (OctoMap, Int)
+-- increment m pt =
+--     (Map.insert pt newVal m, newVal)
+--     where
+--         newVal :: Int
+--         newVal = (1 + (m Map.! pt))
+
+-- incrementAndFindFlash :: OctoMap -> Point -> (OctoMap, Maybe Point)
+-- incrementAndFindFlash m pt =
+--     if val == 10 then
+--         (m', Just pt)
+--     else
+--         (m', Nothing)
+--     where
+--         (m', val) = increment m pt
+
+-- incrementAndFlash :: OctoMap -> Point -> OctoMap
+-- incrementAndFlash m pt =
+--     if val == 10 then
+--         flash m' pt
+--     else
+--         m'
+--     where
+--         (m', val) = increment m pt
+
+-- foldFlashes :: OctoMap -> [Point] -> OctoMap
+-- foldFlashes m flashes =
+--     foldl (\m pt -> flash m pt) m flashes
+
+-- flash :: OctoMap -> Point -> OctoMap
+-- flash m (x, y) =
+--     foldl (\m pt' -> incrementAndFlash m pt') m adjacents
+--     where
+--         adjacents = [(x + dx, y + dy) | dx <- [-1, 0, 1], dy <- [-1, 0, 1], (dx /= 0 || dy /= 0)]
+
+-- mapAndFlashString :: (OctoMap, Int) -> Point -> String
+-- mapAndFlashString (m, flashes) size = 
+--     (toString m size) ++ "\n" ++ (show flashes) ++ "\n"
+
+-- toString :: OctoMap -> Point -> String
+-- toString m (w, h) =
+--     unlines ls
+--     where
+--         ls = map (\y -> toLine y w m) [0..(h-1)]
+--         toLine :: Int -> Int -> OctoMap -> String
+--         toLine y w m = foldr (\x l -> (show $ Map.findWithDefault (-1) (x, y) m) ++ l) "" [0..(w-1)]
+
+
