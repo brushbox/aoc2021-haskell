@@ -78,4 +78,4 @@ showPointSet points =
         maxX = head xs
         maxY = head ys
         xs = Set.toDescList $ Set.map (\(x, _) -> x) points
-        ys = Set.toDescList $ Set.map (\(y, _) -> y) points
+        ys = Set.toDescList $ Set.map (\(_, y) -> y) points
