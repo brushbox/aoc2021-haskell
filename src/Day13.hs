@@ -27,7 +27,6 @@ part2 = do
     input <- readFile "day13.txt"
     let (points, folds) = parseInput input
     let foldedSet = foldl foldSet (Set.fromList points) folds
-    -- putStrLn $ show foldedSet
     putStrLn $ showPointSet foldedSet
 
 parseInput :: String -> ([Point], [Fold])
