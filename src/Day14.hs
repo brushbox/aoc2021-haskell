@@ -55,8 +55,7 @@ parsePair :: String -> ((Element, Element), Element)
 parsePair mapping = ((first, second), insert)
   where
     [first, second] = from
-    insert = head to
-    [from, to] = splitOn " -> " mapping
+    [from, [insert]] = splitOn " -> " mapping
 
 calcPolymer :: PairMappings -> Polymer -> Int -> Int
 calcPolymer mappings polymer count = max - min
@@ -77,8 +76,7 @@ updatePolymer (pairs, elements) (a, b) inserted count = (updatedPairs, updatedEl
     updatedElements = Map.insertWith (+) inserted count elements
 
 minMax :: ElementCounts -> (Int, Int)
-minMax letterCounts = (min, max)
+minMax letterCounts = (minV, maxV)
   where
-    min = head sorted
-    max = last sorted
-    sorted = sort $ Map.elems letterCounts
+    counts = Map.elems letterCounts
+    (minV, maxV) = foldl (\(mi, ma) v -> (min mi v, max ma v)) (maxBound, 0) counts
