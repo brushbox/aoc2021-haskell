@@ -80,3 +80,4 @@ minMax letterCounts = (minV, maxV)
   where
     counts = Map.elems letterCounts
     (minV, maxV) = foldl (\(mi, ma) v -> (min mi v, max ma v)) (maxBound, 0) counts
+

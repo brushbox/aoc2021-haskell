@@ -25,6 +25,9 @@ dependencies:
 - containers
 - bytestring
 - text
+- pqueue
+- astar
+- unordered-containers
 
 library:
   source-dirs: src
