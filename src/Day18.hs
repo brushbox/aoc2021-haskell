@@ -5,7 +5,6 @@ module Day18
   part2)
   where
 
-import Debug.Trace
 import Data.Char
 import Data.Maybe
 
@@ -28,14 +27,15 @@ part1 :: IO ()
 part1 = do
     print "Day 18 part 1"
     input <- readFile "day18.txt"
-    -- let numbers = parseInput input
-    -- print numbers
     print $ magnitude $ doHomework input
 
 part2 :: IO ()
 part2 = do
     print "Day 18 part 2"
-    print "Yay!"
+    input <- readFile "day18.txt"
+    let numbers = parseInput input
+    let result = maximum (addAllPairs numbers)
+    print result
 
 parseInput :: String -> [SNumber]
 parseInput input = map (fst . parseSNumber 1) $ lines input
@@ -47,6 +47,10 @@ parseSNumber depth ('[':numString) = (Pair depth left right, drop 1 remainder') 
     (right, remainder') = parseSNumber (depth + 1) $ drop 1 remainder -- take the comma
 parseSNumber _ (d:numString) = (Number $ digitToInt d, numString)
 parseSNumber _ x = error $ "What do I do with" ++ x
+
+addAllPairs :: [SNumber] -> [Int]
+addAllPairs ns =
+  concatMap (\(a, b) -> [magnitude $ snailAdd a b, magnitude $ snailAdd b a]) [(a, b) | a <- ns, b <- ns, a /= b]
 
 addStrings :: String -> String -> String
 addStrings sn1 sn2 = show (snailAdd n1 n2)
@@ -158,7 +162,7 @@ findExploder z@(Pair {}, _) = maybeGoRight (goLeft z >>= findExploder)
 explode :: Zipper -> Maybe Zipper
 explode z =
   case zexploder of
-    (Just z) -> addLeft (trace (debugMsg "Ex:" z) zexploder) >>= addRight >>= explodePair >>= goRoot
+    (Just z) -> addLeft zexploder >>= addRight >>= explodePair >>= goRoot
     _ -> Nothing
   where
     zexploder = goRoot z >>= findExploder
@@ -175,7 +179,7 @@ explode z =
     explodePair z = goRoot z >>= findExploder >>= modify (\_ -> Number 0)
 
 split :: Zipper -> Maybe Zipper
-split zipper = splitterZipper >>= (\z -> trace (debugMsg "Sp:   " z) (Just z)) >>= modify splitNumber >>= goRoot
+split zipper = splitterZipper >>= modify splitNumber >>= goRoot
   where
     splitterZipper = goRoot zipper >>= findSplitter
     splitNumber (Number n) = Pair (parentDepth + 1) (Number (floor $ fromIntegral n / 2)) (Number (ceiling $ fromIntegral n / 2))
@@ -183,13 +187,5 @@ split zipper = splitterZipper >>= (\z -> trace (debugMsg "Sp:   " z) (Just z)) >
       (Just (Pair d _ _, _)) -> d
       _ -> 0
 
-debugMsg :: String -> Zipper -> String
-debugMsg s z = s ++ show (fst z) ++ " -- " ++ show (rootNumber z)
-
--- toS :: SNumber -> String
--- toS (Number x) = show x
--- toS (Pair _ l r) = "[" ++ toS l ++ "," ++ toS r ++ "]"
-
-
-
--- [[[[4,0],[5,4]],[[7,0],[15,5]]],[7,[[[3,7],[4,3]],[[6,3],[8,8]]]]]
+-- debugMsg :: String -> Zipper -> String
+-- debugMsg s z = s ++ show (fst z) ++ " -- " ++ show (rootNumber z)
