@@ -20,8 +20,10 @@ import Day15
 import Day16
 import Day17
 import Day18
+import Day19
+import Day20
 
 someFunc :: IO ()
 someFunc = do 
-    Day18.part1
-    Day18.part2
+    Day20.part1
+    Day20.part2

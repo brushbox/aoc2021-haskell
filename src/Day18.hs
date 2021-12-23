@@ -64,7 +64,7 @@ reduceString sn = show (snailReduce n)
     (n, _) = parseSNumber 1 sn
 
 doHomework :: String -> SNumber
-doHomework input = foldl (\s n -> snailAdd s n) first rest
+doHomework input = foldl snailAdd first rest
   where
     (first:rest) = parseInput input
 
@@ -108,6 +108,9 @@ goUp (_, []) = Nothing
 goUp (l, LeftCrumb d r:crumbs) = Just (Pair d l r, crumbs)
 goUp (r, RightCrumb d l:crumbs) = Just (Pair d l r, crumbs)
 
+modify :: (SNumber -> SNumber) -> Zipper -> Maybe Zipper
+modify f (snum, bs) = Just (f snum, bs)
+
 goRoot :: Zipper -> Maybe Zipper
 goRoot z@(_, []) = Just z
 goRoot z = goUp z >>= goRoot
@@ -139,9 +142,6 @@ rightmostNumber z = goRight z >>= rightmostNumber
 leftmostNumber :: Zipper -> Maybe Zipper
 leftmostNumber z@(Number _, _) = Just z
 leftmostNumber z = goLeft z >>= leftmostNumber
-
-modify :: (SNumber -> SNumber) -> Zipper -> Maybe Zipper
-modify f (snum, bs) = Just (f snum, bs)
 
 findSplitter :: Zipper -> Maybe Zipper
 findSplitter z@(Number x, _) | x >= 10 = Just z
