@@ -17,13 +17,39 @@ part1 = do
     let answer = rolls * loserScore p1 p2
     print answer
 
+{- 
+-- Dirac Dice
+
+We play with quantum dice. The dice can roll a 1,2 or 3.
+In fact it rolls all three at once (splitting into 3 separate universes on each roll).
+The game continues until one player reaches a score of 21.
+We want to find the player that wins in the most universes...and count how many universes they win in.
+
+Since each turn involves rolling the dice 3 times, that would mean 3 * 3 * 3 universes. But they
+are not evenly likely. Three dice rolls can have a score of 3,4,5,6,7,8,9 each one occurring 
+1,3,6,7,6,3,1 times respectively out of the 27 outcomes.
+
+So, if we pass along the distribution with the "triple value" we can calculate how many universes the progression applies to
+_and_ reduce the scale factor from 27 to 7.
+
+That's probably a lot more manageable.
+
+Further to that, there are only 10 squares on the board, and with only 7 possible progressions from each one we have 
+70 outcomes. E.g. for pos p and a dice roll of d - the player moves to p' and scores s points.
+
+Can we cache the player's pos and score? Because for any (pos, score) the subsequent splits will progress the same
+regardless of how we got to that place (we don't care about the number of turns).
+
+-}
 part2 :: IO ()
 part2 = do
     print "Day 21 part 2"
 
-
 deterministicDice :: [Int]
 deterministicDice = cycle [1..100]
+
+diracDice :: [(Int, Int)]
+diracDice = zip [3..9] [1, 3, 6, 7, 6, 3, 1]
 
 newGame :: Int -> Int -> Game
 newGame p1Pos p2Pos = ((p1Pos, 0), (p2Pos, 0), deterministicDice, 0)
@@ -31,24 +57,23 @@ newGame p1Pos p2Pos = ((p1Pos, 0), (p2Pos, 0), deterministicDice, 0)
 playTurn :: Game -> Game
 playTurn (player1, player2, dice, rolls) = (player1', player2', dice', rolls')
   where
-    (p1Pos, p1Score) = player1
-    (p2Pos, p2Score) = player2
-    (p1Rolls, p2Dice) = splitAt 3 dice
-    (p2Rolls, dice') = splitAt 3 p2Dice
-    p1Points = sum p1Rolls
-    p2Points = sum p2Rolls
-    p1Pos' = movePlayer p1Pos p1Points
-    p2Pos' = movePlayer p2Pos p2Points
-    (player1', rolls2) = if hasWon player1 then 
-                            (player1, rolls) 
-                         else 
-                            ((p1Pos', p1Score + p1Pos'), rolls + 3)
-    (player2', rolls') = if hasWon player1' then 
-                            (player2, rolls2) 
-                         else 
-                            ((p2Pos', p2Score + p2Pos'), rolls2 + 3)
+    (player1', dice1, p1Rolls) = playerTurn player1 dice
+    (player2', dice', p2Rolls) = playerTurn player2 dice1
+    rolls' = rolls + p1Rolls + p2Rolls
+
+playerTurn :: Player -> Dice -> (Player, Dice, Int)
+playerTurn p@(pos, score) d = (p', d', rolls)
+  where
+    (pRolls, pDice) = splitAt 3 d
+    points = sum pRolls
+    pos' = movePlayer pos points
+    (p', d', rolls) = if hasWon p then
+                        (p, d, 0)
+                      else
+                        ((pos', score + pos'), pDice, 3)
     movePlayer p d = (p + d - 1) `mod` 10 + 1
 
+-- Dirac Dice
 loserScore (_, s1) (_, s2) | s1 >= 1000 = s2
                            | otherwise = s1
 
