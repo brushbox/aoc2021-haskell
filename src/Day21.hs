@@ -2,6 +2,7 @@ module Day21
   ( part1, part2)
 where
 
+import Data.List
 import Data.Foldable
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -9,9 +10,12 @@ import qualified Data.Map as Map
 type Dice = [Int]
 type Pos = Int
 type Score = Int
-type Player = (Pos, Score)
+-- type Player = (Pos, Score)
 type Rolls = Int
 type Game = (Player, Player, Dice, Rolls)
+
+data Player = Player Int Int
+  deriving Show
 
 part1 :: IO ()
 part1 = do
@@ -25,7 +29,12 @@ deterministicDice :: [Int]
 deterministicDice = cycle [1..100]
 
 newGame :: Int -> Int -> Game
-newGame p1Pos p2Pos = ((p1Pos, 0), (p2Pos, 0), deterministicDice, 0)
+newGame p1Pos p2Pos = (Player p1Pos 0, Player p2Pos 0, deterministicDice, 0)
+
+-- playTurn :: Game -> Game
+-- playTurn (player, p2, dice, rolls) = (p2, player', dice', rolls + rolls')
+--   where
+--     (player', dice', rolls') = playerTurn player dice
 
 playTurn :: Game -> Game
 playTurn (player1, player2, dice, rolls) = (player1', player2', dice', rolls')
@@ -35,19 +44,19 @@ playTurn (player1, player2, dice, rolls) = (player1', player2', dice', rolls')
     rolls' = rolls + p1Rolls + p2Rolls
 
 playerTurn :: Player -> Dice -> (Player, Dice, Int)
-playerTurn p@(pos, score) d = (p', d', rolls)
+playerTurn p@(Player pos score) dice = (p', dice'', rolls')
   where
-    (pRolls, pDice) = splitAt 3 d
-    points = sum pRolls
+    (rolls, dice') = splitAt 3 dice
+    points = sum rolls
     pos' = movePlayer pos points
-    (p', d', rolls) = if hasWonDeterministic p then
-                        (p, d, 0)
+    (p', dice'', rolls') = if hasWonDeterministic p then
+                        (p, dice, 0)
                       else
-                        ((pos', score + pos'), pDice, 3)
+                        (Player pos' (score + pos'), dice', 3)
     movePlayer p d = (p + d - 1) `mod` 10 + 1
 
-loserScore (_, s1) (_, s2) | s1 >= 1000 = s2
-                           | otherwise = s1
+loserScore :: Player -> Player -> Int
+loserScore (Player _ s1) (Player _ s2) = min s1 s2
 
 playGame :: Game -> Game
 playGame g = if gameWon then g' else playGame g'
@@ -57,7 +66,7 @@ playGame g = if gameWon then g' else playGame g'
     gameWon = hasWonDeterministic player1 || hasWonDeterministic player2
 
 hasWon :: Int -> Player -> Bool
-hasWon target (_, score) = score >= target
+hasWon target (Player _ score) = score >= target
 
 hasWonDeterministic :: Player -> Bool
 hasWonDeterministic = hasWon 1000
@@ -109,84 +118,118 @@ diracTurn :: UniverseMap -> [TurnRoll] -> UniverseMap
 -}
 
 type UniverseCount = Int
-type DiceRoll = Int
-type TurnRoll = (DiceRoll, UniverseCount)
-type UniverseMap = Map (Player, Player) UniverseCount
+type DiceRoll = (Int, UniverseCount)
+type UniverseMap = Map (Player, Player) (Int, Int)
 type DiracGame = ((Player, Player), UniverseCount)
 
 part2 :: IO ()
 part2 = do
     print "Day 21 part 2"
+    let result = playDiracDice exampleGame
+    print result
 
-diracDiceRolls :: [(DiceRoll, UniverseCount)]
+diracDiceRolls :: [DiceRoll]
 diracDiceRolls = zip [3..9] [1, 3, 6, 7, 6, 3, 1]
 
-turnRolls :: [TurnRoll]
-turnRolls = [((d1, d2), u1 * u2) | (d1, u1) <- diracDiceRolls, (d2, u2) <- diracDiceRolls]
+startingGame :: ((Player, Player), Int)
+startingGame = ((Player 9 0, Player 4 0), 1)
+
+exampleGame :: ((Player, Player), Int)
+exampleGame = ((Player 4 0, Player 8 0), 1)
+
+-- wincounts for starting pos 4, 8
+-- (27 0)
+-- (183 156)
+-- (990 207)
+-- (2930 971)
+-- (7907 2728)
+-- (30498 7203)
+-- (127019 152976)
+-- (655661 1048978)
+-- (4008007 4049420)
+-- (18973591 12657100)
 
 {-
-To play dirac dice I need to have:
-* a map of universes after the last turn starts as `Map.singleton ((4, 0), (8, 0)) 1` - for the example
-* a count of the p1 wins and p2 wins so far (0, 0)
-* then we:
-  * if the input map is empty we return the win counts 
-  * do a diracTurn on the inputMap to get the outputMap
-  * partition the outputMap into finished games and games still in progress
-  * tally up the p1 and p2 wins - update the winCounts
-  * the games still in progress becomes the input for the next round.
+If we play a single turn with a winning score of 1, then the player who is playing will win all 27 games.
+
+Give a single Game state let's play all the possible dice for a single player and come up with a list of output gamestate/universes.
 -}
-
-playDiracDice :: (Int, Int)
-playDiracDice = diracDice (Map.singleton ((4, 0), (8, 0)) 1) (0, 0)
-
-diracDice :: UniverseMap -> (Int, Int) -> (Int, Int)
-diracDice us winCounts@(p1Wins, p2Wins)
-  | Map.null us = winCounts
-  | otherwise = diracDice stillInProgress (p1Wins', p2Wins')
+diracTurn :: DiracGame -> (Int, [DiracGame])
+diracTurn ((p1@(Player p1Pos p1Score), otherPlayer), universes) = (winCount, inPlay)
   where
-    outputUs = diracTurn us
-    (gamesWon, stillInProgress) = Map.partitionWithKey (curry gameWonDirac) outputUs
-    (wonByP1, wonByP2) = foldl (\(w1, w2) ((p1, p2), c) -> (w1 + winCount p1 c, w2 + winCount p2 c)) (0, 0) $ Map.toList gamesWon
-    (p1Wins', p2Wins') = (p1Wins + wonByP1, p2Wins + wonByP2)
-    winCount p@(_, s) c | hasWonDirac p = c 
-                        | otherwise = 0
+    winCount = sum $ map snd wins
+    (wins, inPlay) = partition (\((_, p), _) -> hasWonDirac p) outcomes
+    outcomes = map newUniverse diracDiceRolls
+    newUniverse :: (Int, Int) -> DiracGame -- Note: we flip-flop the players here.
+    newUniverse (sum, freq) = ((otherPlayer, movePlayer p1 (sum, freq)), universes * freq)
 
--- build a new map of Universes by splitting all the current universes by the turnmap
-diracTurn :: UniverseMap -> UniverseMap
-diracTurn m = foldl splitUniverse Map.empty $ Map.toList m
-  where
-    splitUniverse m u = insertListWith (*) (applyRolls u turnRolls) m
-
-applyRolls :: DiracGame -> [TurnRoll] -> [DiracGame]
-applyRolls game = map (applyTurn game)
-
-applyTurn :: DiracGame -> TurnRoll -> DiracGame
-applyTurn g@((p1, p2), universes) ((p1Roll, p2Roll), count)
-  | gameWonDirac g = g
-  | otherwise = ((p1', p2'), universes'')
-  where
-   (p1', universes') = movePlayer p1 p1Roll universes
-   (p2', universes'') = if hasWonDirac p1 then (p2, universes') else movePlayer p2 p2Roll universes'
-   movePlayer (pos, score) roll universes = ((newPos pos roll, score + newPos pos roll), universes * count)
-   newPos p d = (p + d - 1) `mod` 10 + 1
-
-gameWonDirac :: DiracGame -> Bool
-gameWonDirac ((p1, p2), _) = hasWonDirac p1 || hasWonDirac p2
+movePlayer :: Player -> (Int, Int) -> Player
+movePlayer (Player pos score) (sum, _) = Player newPos (score + newPos)
+  where 
+    newPos = (pos + sum - 1) `mod` 10 + 1
 
 hasWonDirac :: Player -> Bool
-hasWonDirac = hasWon 4
+hasWonDirac = hasWon 21
 
-insertListWith :: Ord key
-               => (elt -> elt -> elt)
-               -> [(key,elt)]
-               -> Map key elt
-               -> Map key elt
-insertListWith f xs m0 = foldl' (\m (k, v) -> Map.insertWith f k v m) m0 xs
+playDiracDice :: DiracGame -> (Int, Int)
+playDiracDice startingGame = diracDice [startingGame] (0, 0)
+
+diracDice :: [DiracGame] -> (Int, Int) -> (Int, Int)
+diracDice [] wins = wins
+diracDice games (p1Wins, p2Wins) = (p1Wins', p2Wins')
+  where
+    outcomes :: [(Int, [DiracGame])]
+    outcomes = map diracTurn games
+    wins = map fst outcomes
+    gamesInPlay = concatMap snd outcomes
+    (p2Wins', p1Wins') = diracDice gamesInPlay (p2Wins, p1Wins + sum wins)
+
+-- diracDice :: UniverseMap -> (Int, Int) -> (Int, Int)
+-- diracDice us (p1Wins, p2Wins)
+--   | Map.null us = (p1Wins, p2Wins)
+--   | otherwise = diracDice stillInProgress (p1Wins', p2Wins')
+--   where
+--     outputUs = diracTurn us
+--     (gamesWon, stillInProgress) = Map.partitionWithKey (curry gameWonDirac) outputUs
+--     (wonByP1, wonByP2) = foldl (\(w1, w2) ((p1, p2), c) -> (w1 + winCount p1 c, w2 + winCount p2 c)) (0, 0) $ Map.toList gamesWon
+--     (p1Wins', p2Wins') = (p1Wins + wonByP1, p2Wins + wonByP2)
+--     winCount p@(_, s) c | hasWonDirac p = c 
+--                         | otherwise = 0
+
+-- -- build a new map of Universes by splitting all the current universes by the turnmap
+-- diracTurn :: UniverseMap -> UniverseMap
+-- diracTurn m = foldl splitUniverse Map.empty $ Map.toList m
+--   where
+--     splitUniverse m u = insertListWith (*) (applyRolls u turnRolls) m
+
+-- applyRolls :: DiracGame -> [TurnRoll] -> [DiracGame]
+-- applyRolls game = map (applyTurn game)
+
+-- applyTurn :: DiracGame -> TurnRoll -> DiracGame
+-- applyTurn g@((p1, p2), universes) ((p1Roll, p1Count), (p2Roll, p2Count))
+--   | gameWonDirac g = g
+--   | otherwise = ((p1', p2'), universes'')
+--   where
+--    (p1', universes') = movePlayer p1 p1Roll p1Count universes
+--    (p2', universes'') = if hasWonDirac p1 then (p2, universes') else movePlayer p2 p2Roll p2Count universes'
+--    movePlayer (pos, score) roll count universes = ((newPos pos roll, score + newPos pos roll), universes * count)
+--    newPos p d = (p + d - 1) `mod` 10 + 1
+
+-- gameWonDirac :: DiracGame -> Bool
+-- gameWonDirac ((p1, p2), _) = hasWonDirac p1 || hasWonDirac p2
 
 
--- Here's what my first attempt got (expected vs actual)
--- 444356092776315
--- 5810775830793857067
+-- insertListWith :: Ord key
+--                => (elt -> elt -> elt)
+--                -> [(key,elt)]
+--                -> Map key elt
+--                -> Map key elt
+-- insertListWith f xs m0 = foldl' (\m (k, v) -> Map.insertWith f k v m) m0 xs
 
--- 341960390180808
--- 3519343295535406443
+
+-- -- Here's what my first attempt got (expected vs actual)
+-- -- 444356092776315
+-- -- 5810775830793857067
+
+-- -- 341960390180808
+-- -- 3519343295535406443
