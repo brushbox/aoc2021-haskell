@@ -22,10 +22,10 @@ module Lib
 -- import Day18
 -- import Day19
 -- import Day20
-import Day21
--- import Day22
+-- import Day21
+import Day22
 
 someFunc :: IO ()
 someFunc = do 
-    Day21.part1
-    Day21.part2
+    Day22.part1
+    Day22.part2

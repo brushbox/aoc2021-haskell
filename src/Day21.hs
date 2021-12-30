@@ -99,16 +99,6 @@ exampleGame :: ((Player, Player), Int)
 exampleGame = ((Player 4 0, Player 8 0), 1)
 
 -- wincounts for starting pos 4, 8
--- (27 0)
--- (183 156)
--- (990 207)
--- (2930 971)
--- (7907 2728)
--- (30498 7203)
--- (127019 152976)
--- (655661 1048978)
--- (4008007 4049420)
--- (18973591 12657100)
 -- Winning Score	Player 1 Wins	Player 2 Wins	Player 1 Win%
 -- 1	27	0	100.00
 -- 2	183	156	53.98
